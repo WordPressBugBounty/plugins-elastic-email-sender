@@ -1,0 +1,1 @@
+# plugins-elastic-email-sender
