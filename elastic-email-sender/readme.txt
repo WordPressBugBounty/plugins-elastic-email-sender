@@ -2,7 +2,7 @@
 Contributors: elasticemail, rafkwa
 Tags:  elastic email, email marketing, transactional email, email sender, email, mailer, send email
 Requires at least: 5.0
-Tested up to: 6.7
+Tested up to: 6.8
 Stable tag: 1.2.9
 Requires PHP: 7.0
 License: GPLv2 or later
@@ -87,6 +87,9 @@ Please make sure that you have the “Auto Create Text Body” turned on in your
 You can translate Elastic Email Sender on [__translate.wordpress.org__](https://translate.wordpress.org/projects/wp-plugins/elastic-email-sender).
 
 == Changelog ==
+
+= 1.2.19 =
+* Regular update
 
 = 1.2.18 =
 * Regular update
