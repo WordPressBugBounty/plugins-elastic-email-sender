@@ -12,7 +12,7 @@ This plugin reconfigures the `wp_mail()` function to send email using API (via E
 
 == Description ==
 
-Elastic Email Sender allows you to connect your WordPress with our powerful, low-cost Elastic Email API and send unlimited emails per month!
+Elastic Email Sender allows you to connect your WordPress with our powerful, low-cost Elastic Email API and start sending marketing or transactional emails!
 Please follow the information below and find out more about how we can help you send your emails in a more efficient way.
 In case of any questions or concerns, feel free to contact us anytime.
 
@@ -87,6 +87,9 @@ Please make sure that you have the “Auto Create Text Body” turned on in your
 You can translate Elastic Email Sender on [__translate.wordpress.org__](https://translate.wordpress.org/projects/wp-plugins/elastic-email-sender).
 
 == Changelog ==
+
+= 1.2.20 =
+* Regular update
 
 = 1.2.19 =
 * Regular update
