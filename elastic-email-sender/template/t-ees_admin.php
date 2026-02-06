@@ -4,10 +4,11 @@ defined('EE_ADMIN_5120420526') or die('No direct access allowed.');
 wp_enqueue_style('eesender-bootstrap-grid');
 wp_enqueue_style('eesender-css');
 
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- settings-updated is added by WordPress Settings API after saving settings
 if (isset($_GET['settings-updated'])):
     ?>
     <div id="message" class="updated">
-        <p><strong><?php _e('Settings saved.', 'elastic-email-sender') ?></strong></p>
+        <p><strong><?php esc_html_e('Settings saved.', 'elasticemailsender') ?></strong></p>
     </div>
 <?php endif; ?>
 
@@ -16,20 +17,20 @@ if (isset($_GET['settings-updated'])):
     <div class="col-12 col-md-12 col-lg-7">
         <div class="ee-header">
             <div class="ee-pagetitle">
-                <h1><?php _e('General Settings', 'elastic-email-sender') ?></h1>
+                <h1><?php esc_html_e('General Settings', 'elasticemailsender') ?></h1>
             </div>
         </div>
 
         <p class="ee-p margin-p-xs">
             <?php
-            _e('Welcome to the Elastic Email WordPress Plugin! From now on, you can send your emails in the 
+            esc_html_e('Welcome to the Elastic Email WordPress Plugin! From now on, you can send your emails in the 
                     fastest and most reliable way! Just one quick step and you will be ready to rock your 
                     subscribers\' inbox. Fill in the details about the main configuration of 
-                    Elastic Email connections.', 'elastic-email-sender');
+                    Elastic Email connections.', 'elasticemailsender');
             ?>
         </p>
 
-        <form class="settings-box-form" method="post" action="<?php echo admin_url() . 'options.php' ?>">
+        <form class="settings-box-form" method="post" action="<?php echo esc_url(admin_url('options.php')); ?>">
             <?php
             settings_fields('ee_option_group');
             do_settings_sections('ee-settings');
@@ -41,124 +42,52 @@ if (isset($_GET['settings-updated'])):
 
                     if (get_option('ees-connecting-status') === 'connecting') {
                         if (empty($error) === true) {
-                            $error_stat = 'ee-success';
+                            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Variable is local to this template file
+                            $ees_error_stat = 'ee-success';
                         }
                     }
                     if (get_option('ees-connecting-status') === 'disconnected') {
                         if (empty($error) === false) {
-                            $error_stat = 'ee-error';
+                            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Variable is local to this template file
+                            $ees_error_stat = 'ee-error';
                         } else {
                             $error = 'false';
-                            $error_stat = 'ee-error';
+                            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Variable is local to this template file
+                            $ees_error_stat = 'ee-error';
                         }
                     }
 
                     ?>
-                    <th scope="row"><?php _e('Connection Test:', 'elastic-email-sender') ?></th>
-                    <td> <span class="<?php echo $error_stat ?>">
+                    <th scope="row"><?php esc_html_e('Connection Test:', 'elasticemailsender') ?></th>
+                    <td> <span class="<?php echo esc_attr($ees_error_stat); ?>">
 
                         <?php
                         if (get_option('ees-connecting-status') === 'connecting') {
                             if (empty($error) === true) {
-                                _e('Connected', 'elastic-email-sender');
+                                esc_html_e('Connected', 'elasticemailsender');
                             }
                         }
                         if (get_option('ees-connecting-status') === 'disconnected') {
                             if (empty($error) === false) {
-                                _e('Connection error, check your API key. ', 'elastic-email-sender');
+                                esc_html_e('Connection error, check your API key. ', 'elasticemailsender');
                             }
                         }
                         ?>
 
                         </span></td>
                 </tr>
-                <tr class="table-slim" class="table-slim" valign="top">
-                    <th scope="row"><?php _e('Account status:', 'elastic-email-sender') ?></th>
-                    <td>
-                        <?php
-                        if (isset($accountstatus)) {
-                            if ($accountstatus == 1) {
-                                $accountstatusname = '<span class="ee-account-status-active">' . __('Active', 'elastic-email-sender') . '</span>';
-                            } else {
-                                $accountstatusname = '<span class="ee-account-status-deactive">' . __('Please conect to Elastic Email API or complete the profile', 'elastic-email-sender') . ' <a href="https://elasticemail.com/account/#/account/profile">' . __('Complete your profile', 'elastic-email-sender') . '</a>' . __(' or connect to Elastic Email API to start using the plugin.', 'elastic-email-sender') . '</span>';
-                            }
-                        } else {
-                            $accountstatusname = '<span class="ee-account-status-deactive">' . __('Please conect to Elastic Email API or complete the profile', 'elastic-email-sender') . ' <a href="https://elasticemail.com/account/#/account/profile">' . __('Complete your profile', 'elastic-email-sender') . '</a>' . __(' or connect to Elastic Email API to start using the plugin.', 'elastic-email-sender') . '</span>';
-                        }
-                        echo $accountstatusname;
-                        ?>
-                    </td>
-                </tr>
-
-                <tr class="table-slim" valign="top">
-                    <th scope="row"><?php _e('Account daily limit:', 'elastic-email-sender') ?></th>
-                    <td>
-                        <?php
-                        if (get_option('ees-connecting-status') === 'disconnected') {
-                            echo '---';
-                        } else {
-                            if (isset($accountdailysendlimit)) {
-                                if ($accountdailysendlimit === 0) {
-                                    _e('Not set', 'elastic-email-sender');
-                                } else {
-                                    echo $accountdailysendlimit;
-                                }
-                            } else {
-                                echo '-------';
-                            }
-                        }
-                        ?>
-                    </td>
-                </tr>
-
-                <?php
-                if (isset($issub) || isset($requiresemailcredits) || isset($emailcredits)) {
-                    if ($emailcredits != 0) {
-                        if ($issub == false || $requiresemailcredits == false) {
-                            echo '<tr class="table-slim" valign="top"><th scope="row">' . __('Email Credits:', 'elastic-email-sender') . '</th><td>' . $emailcredits . '</td></tr>';
-                        }
-                    }
-                }
-
-                if (get_option('elastic-email-to-send-status') !== NULL) {
-                    if (get_option('elastic-email-to-send-status') == 1) {
-                        $getaccountabilitytosendemail_single = '<span style="color: #CB2E25;">' . __('Account doesn\'t have enough credits', 'elastic-email-sender') . '</span>';
-                    } elseif (get_option('elastic-email-to-send-status') == 2) {
-                        $getaccountabilitytosendemail_single = '<span style="color: #F9C053;">' . __('Account can send e-mails but only without the attachments', 'elastic-email-sender') . '</span>';
-                    } elseif (get_option('elastic-email-to-send-status') == 3) {
-                        $getaccountabilitytosendemail_single = '<span style="color: #CB2E25;">' . __('Daily Send Limit Exceeded', 'elastic-email-sender') . '</span>';
-                    } elseif (get_option('elastic-email-to-send-status') == 4) {
-                        $getaccountabilitytosendemail_single = '<span style="color: #449D44;">' . __('Account is ready to send e-mails', 'elastic-email-sender') . '</span>';
-                    } else {
-                        $getaccountabilitytosendemail_single = '<span style="color: #CB2E25;">' . __('Check the account configuration', 'elastic-email-sender') . '</span>';
-                    }
-                } else {
-                    $getaccountabilitytosendemail_single = '---';
-                }
-                ?>
-                <tr class="table-slim" valign="top">
-                    <th scope="row"><?php _e('Credit status:', 'elastic-email-sender') ?></th>
-                    <td>
-                        <?php if (get_option('ees-connecting-status') === 'disconnected') {
-                            echo '---';
-                        } else {
-                            echo $getaccountabilitytosendemail_single;
-                        } ?>
-                    </td>
-                </tr>
-
                 </tbody>
             </table>
             <?php submit_button(); ?>
         </form>
 
 
-        <?php if (empty($error) === false) { ?><?php _e('Do not have an account yet?', 'elastic-email-sender') ?> <a
+        <?php if (empty($error) === false) { ?><?php esc_html_e('Do not have an account yet?', 'elasticemailsender') ?> <a
                 href="https://elasticemail.com/account#/create-account" target="_blank"
-                title="First 1000 emails for free."><?php _e('Create your account now', 'elastic-email-sender') ?></a>!
+                title="First 1000 emails for free."><?php esc_html_e('Create your account now', 'elasticemailsender') ?></a>!
             <br/>
             <a href="http://elasticemail.com/transactional-email"
-               target="_blank"><?php _e('Tell me more about it', 'elastic-email-sender') ?></a>
+               target="_blank"><?php esc_html_e('Tell me more about it', 'elasticemailsender') ?></a>
         <?php } ?>
 
     </div>

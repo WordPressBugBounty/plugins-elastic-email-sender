@@ -14,8 +14,7 @@ class eeadmin5120420526
      */
     private $defaultOptions = ['ee_enable' => 'no', 'ee_apikey' => null, 'ee_emailtype' => 'marketing'],
     $options,
-    $initAPI = false,
-    $subscribe_status = false;
+    $initAPI = false;
     public $theme_path;
 
     /**
@@ -27,15 +26,9 @@ class eeadmin5120420526
         add_action('init', [$this, 'WooCommerce_email']);
         add_action('init', [$this, 'WooCommerce_name']);
         add_action('admin_init', [$this, 'init_options']);
-        add_action('plugins_loaded', [$this, 'eesender_load_textdomain']);
         $this->options = get_option('ee_options', $this->defaultOptions);
 
         add_action('admin_menu', [$this, 'add_menu']);
-    }
-
-    public function eesender_load_textdomain()
-    {
-        load_plugin_textdomain('elastic-email-sender', false, basename(dirname(__FILE__)) . '/languages');
     }
 
     // Added admin menu
@@ -43,11 +36,11 @@ class eeadmin5120420526
     {
         add_action('admin_enqueue_scripts', array($this, 'custom_admin_scripts'));
 
-        add_menu_page('Elastic Email Sender', 'Elastic Email Sender', 'manage_options', 'elasticemail-settings', [$this, 'show_settings'], plugins_url('/src/img/icon.png', dirname(__FILE__)));
-        add_submenu_page('elasticemail-settings', 'Settings', __('Settings', 'elastic-email-sender'), 'manage_options', 'elasticemail-settings', [$this, 'show_settings']);
-        add_submenu_page('elasticemail-settings', 'Reports', __('Reports', 'elastic-email-sender'), 'manage_options', 'elasticemail-report', [$this, 'show_reports']);
-        add_submenu_page('elasticemail-settings', 'Send Test', __('Send test', 'elastic-email-sender'), 'manage_options', 'elasticemail-send-test', [$this, 'show_sendtest']);
-        add_submenu_page('elasticemail-settings', 'Error log', __('Error log', 'elastic-email-sender'), 'manage_options', 'elasticemail-error-log', [$this, 'show_errorlog']);
+        add_menu_page(esc_html__('Elastic Email Sender', 'elasticemailsender'), esc_html__('Elastic Email Sender', 'elasticemailsender'), 'manage_options', 'elasticemail-settings', [$this, 'show_settings'], plugins_url('/src/img/icon.png', dirname(__FILE__)));
+        add_submenu_page('elasticemail-settings', esc_html__('Settings', 'elasticemailsender'), esc_html__('Settings', 'elasticemailsender'), 'manage_options', 'elasticemail-settings', [$this, 'show_settings']);
+        add_submenu_page('elasticemail-settings', esc_html__('Reports', 'elasticemailsender'), esc_html__('Reports', 'elasticemailsender'), 'manage_options', 'elasticemail-report', [$this, 'show_reports']);
+        add_submenu_page('elasticemail-settings', esc_html__('Send test', 'elasticemailsender'), esc_html__('Send test', 'elasticemailsender'), 'manage_options', 'elasticemail-send-test', [$this, 'show_sendtest']);
+        add_submenu_page('elasticemail-settings', esc_html__('Error log', 'elasticemailsender'), esc_html__('Error log', 'elasticemailsender'), 'manage_options', 'elasticemail-error-log', [$this, 'show_errorlog']);
     }
 
     public function custom_admin_scripts()
@@ -55,7 +48,7 @@ class eeadmin5120420526
         if (is_admin()) {
 
             $plugin_path = plugins_url() . '/' . get_option('ees_plugin_dir_name');
-            wp_register_script('eesender-jquery', $plugin_path . '/lib/jquery.min.js', '', 3.3, true);
+            wp_register_script('eesender-jquery', false, array('jquery'), '3.3', true);
             wp_register_script('eesender-chart-script', $plugin_path . '/lib/chart.min.js', '', 2.7, true);
             wp_register_script('eesender-send-test', $plugin_path . '/dist/ees_sendTest.min.js', '', 1.2, true);
             wp_register_style('eesender-bootstrap-grid', $plugin_path . '/lib/bootstrap-grid.min.css', '', 4.1, false);
@@ -65,7 +58,8 @@ class eeadmin5120420526
                 'eesender-send-test',
                 'ees_localize_data',
                 [
-                    'adminUrl' => get_admin_url()
+                    'adminUrl' => esc_url(get_admin_url()),
+                    'nonce' => wp_create_nonce('ee_clean_error_log'),
                 ]
             );
         }
@@ -85,43 +79,9 @@ class eeadmin5120420526
             $account = array();
         }
 
-        if (isset($account['data']['statusnumber'])) {
-            if ($account['data']['statusnumber'] > 0) {
-                $accountstatus = $account['data']['statusnumber'];
-            } else {
-                $accountstatus = 'Please conect to Elastic Email API';
-            }
-            update_option('ees-connecting-status', 'connecting');
-        } else {
-            $accountstatus = 'Please connect to Elastic Email API';
-            update_option('ees-connecting-status', 'disconnected');
-        }
-
         if (isset($account['data']['email'])) {
             update_option('ee_from_email', $account['data']['email']);
         }
-
-        $accountdailysendlimit = '';
-        if (isset($account['data']['actualdailysendlimit'])) {
-            $accountdailysendlimit = $account['data']['actualdailysendlimit'];
-        }
-
-        if (isset($account['data']['requiresemailcredits'])) {
-            $requiresemailcredits = $account['data']['requiresemailcredits'];
-        }
-
-        if (isset($account['data']['emailcredits'])) {
-            $emailcredits = $account['data']['emailcredits'];
-        }
-
-        if (isset($account['data']['requiresemailcredits'])) {
-            $requiresemailcredits = $account['data']['requiresemailcredits'];
-        }
-
-        if (isset($account['data']['issub'])) {
-            $issub = $account['data']['issub'];
-        }
-
 
         if (!filter_var(get_option('ee_is_created_channels'), FILTER_VALIDATE_BOOLEAN)) {
 
@@ -146,11 +106,9 @@ class eeadmin5120420526
         $this->initAPI();
         try {
             $channelAPI = new \ElasticEmailClient\Channel();
-            $error = null;
-            $channelAdd = $channelAPI->Add($name);
+            $channelAPI->Add($name);
         } catch (ElasticEmailClient\ApiException $e) {
-            $error = $e->getMessage();
-            $channelAdd = [];
+            // Channel creation failed, silently continue
         }
     }
 
@@ -159,13 +117,12 @@ class eeadmin5120420526
         $this->initAPI();
         try {
             $statusToSendEmailAPI = new \ElasticEmailClient\Account();
-            $error = null;
             $statusToSendEmail = $statusToSendEmailAPI->GetAccountAbilityToSendEmail();
             if (isset($statusToSendEmail['data'])) {
                 update_option('elastic-email-to-send-status', $statusToSendEmail['data']);
             }
         } catch (Exception $ex) {
-            $statusToSendEmail = [];
+            // Status check failed, silently continue
         }
         return;
     }
@@ -189,24 +146,40 @@ class eeadmin5120420526
     {
         $this->initAPI();
 
-        if (isset($_POST['daterange'])) {
-            $daterangeselect = $_POST['daterange'];
-            if ($daterangeselect === 'last-mth') {
-                $from = date('c', strtotime('-30 days'));
-                $to = date('c');
-            }
-            if ($daterangeselect === 'last-wk') {
-                $from = date('c', strtotime('-7 days'));
-                $to = date('c');
-            }
-            if ($daterangeselect === 'last-2wk') {
-                $from = date('c', strtotime('-14 days'));
-                $to = date('c');
-            }
-        } else {
-            $from = date('c', strtotime('-30 days'));
-            $to = date('c');
+        $allowed_ranges = [
+            'last-7d'  => '-7 days',
+            'last-14d' => '-14 days',
+            'last-30d' => '-30 days',
+            'last-3m'  => '-3 months',
+            'last-6m'  => '-6 months',
+            'last-1y'  => '-1 year',
+        ];
+        $date_range = get_option('daterangeselect', 'last-7d');
+        if (!array_key_exists($date_range, $allowed_ranges)) {
+            $date_range = 'last-7d';
         }
+
+        if (isset($_POST['daterange'])) {
+            // Verify nonce
+            // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- wp_verify_nonce() validates the nonce directly, sanitization is not needed
+            if (!isset($_POST['ees_reports_nonce']) || !wp_verify_nonce(wp_unslash($_POST['ees_reports_nonce']), 'ees_reports')) {
+                wp_die(esc_html__('Security check failed.', 'elasticemailsender'));
+            }
+
+            // Check user capabilities
+            if (!current_user_can('manage_options')) {
+                wp_die(esc_html__('You do not have permission to perform this action.', 'elasticemailsender'));
+            }
+
+            $requested_range = sanitize_text_field(wp_unslash($_POST['daterange']));
+            if (array_key_exists($requested_range, $allowed_ranges)) {
+                $date_range = $requested_range;
+                update_option('daterangeselect', $date_range);
+            }
+        }
+
+        $to = gmdate('c');
+        $from = gmdate('c', strtotime($allowed_ranges[$date_range]));
 
         try {
             $LogAPI = new \ElasticEmailClient\Log();
@@ -230,7 +203,6 @@ class eeadmin5120420526
             }
         } catch (ElasticEmailClient\ApiException $e) {
             $error = $e->getMessage();
-            $LogList = [];
         }
         //Loads the settings template
         require_once($this->theme_path . '/template/t-ees_reports.php');
@@ -267,7 +239,7 @@ class eeadmin5120420526
         //INIT FIELD
         add_settings_field(
             'ee_enable',
-            __('Select mailer:', 'elastic-email-sender'),
+            esc_html__('Select mailer:', 'elasticemailsender'),
             [$this, 'enable_input'],
             'ee-settings',
             'setting_section_id',
@@ -278,7 +250,7 @@ class eeadmin5120420526
 
         add_settings_field(
             'ee_apikey',
-            __('Elastic Email API Key:', 'elastic-email-sender'),
+            esc_html__('Elastic Email API Key:', 'elasticemailsender'),
             [$this, 'input_apikey'],
             'ee-settings',
             'setting_section_id',
@@ -290,7 +262,7 @@ class eeadmin5120420526
 
         add_settings_field(
             'ee_emailtype',
-            __('Email type:', 'elastic-email-sender'),
+            esc_html__('Email type:', 'elasticemailsender'),
             [$this, 'emailtype_input'],
             'ee-settings',
             'setting_section_id',
@@ -301,7 +273,7 @@ class eeadmin5120420526
 
         add_settings_field(
             'ee_mime_type',
-            __('MIME type:', 'elastic-email-sender'),
+            esc_html__('MIME type:', 'elasticemailsender'),
             [$this, 'mimetype_input'],
             'ee-settings',
             'setting_section_id',
@@ -313,7 +285,7 @@ class eeadmin5120420526
         if (is_plugin_active('woocommerce/woocommerce.php')) {
             add_settings_field(
                 'ee_override_wooCommerce',
-                __('Override', 'elastic-email-sender'),
+                esc_html__('Override', 'elasticemailsender'),
                 [$this, 'override_wooCommerce_input'],
                 'ee-settings',
                 'setting_section_id',
@@ -326,7 +298,7 @@ class eeadmin5120420526
 
         add_settings_field(
             'ee_from_name_config',
-            __('From name (default empty):', 'elastic-email-sender'),
+            esc_html__('From name (default empty):', 'elasticemailsender'),
             [$this, 'from_name_config_input'],
             'ee-settings',
             'setting_section_id',
@@ -338,7 +310,7 @@ class eeadmin5120420526
 
         add_settings_field(
             'ee_from_email_config',
-            __('Email FROM (default empty):', 'elastic-email-sender'),
+            esc_html__('Email FROM (default empty):', 'elasticemailsender'),
             [$this, 'from_email_config_input'],
             'ee-settings',
             'setting_section_id',
@@ -350,7 +322,7 @@ class eeadmin5120420526
 
         add_settings_field(
             'ee_channel_name',
-            __('Channel name:', 'elastic-email-sender'),
+            esc_html__('Channel name:', 'elasticemailsender'),
             [$this, 'channel_name_input'],
             'ee-settings',
             'setting_section_id',
@@ -396,11 +368,13 @@ class eeadmin5120420526
         <input
             type="text"
             id="title"
-            name="ee_options[' . $arg['input_name'] . ']"
-            value="' . $apikey . '"
+            name="ee_options[%s]"
+            value="%s"
             style="%s"
         />',
-            (isset($arg['width']) && $arg['width'] > 0) ? 'width:' . $arg['width'] . 'px' : ''
+            esc_attr($arg['input_name']),
+            esc_attr($apikey),
+            (isset($arg['width']) && $arg['width'] > 0) ? 'width:' . absint($arg['width']) . 'px' : ''
         );
     }
 
@@ -418,21 +392,21 @@ class eeadmin5120420526
                <div class="ee-admin-settings-radio-item">
                 <input
                     type="radio"
-                    name="ee_options[' . $arg['input_name'] . ']"
+                    name="ee_options[' . esc_attr($arg['input_name']) . ']"
                     value="yes"
                     ' . (($value === 'yes') ? 'checked' : '') . '
                 />
-                <span>' . __('Send all WordPress emails via Elastic Email API.', 'elastic-email-sender') . '</span>
+                <span>' . esc_html__('Send all WordPress emails via Elastic Email API.', 'elasticemailsender') . '</span>
                </div>
 
                <div class="ee-admin-settings-radio-item">
                 <input
                     type="radio"
-                    name="ee_options[' . $arg['input_name'] . ']"
+                    name="ee_options[' . esc_attr($arg['input_name']) . ']"
                     value="no"
                     ' . (($value === 'no') ? 'checked' : '') . '
                 />
-                <span>' . __('Use the defaults Wordpress function to send emails.', 'elastic-email-sender') . '</span>
+                <span>' . esc_html__('Use the defaults Wordpress function to send emails.', 'elasticemailsender') . '</span>
               </div>
              </div>';
     }
@@ -453,19 +427,19 @@ class eeadmin5120420526
                 <div class="ee-admin-settings-radio-inline">
                     <input
                         type="radio"
-                        name="ee_options[' . $arg['input_name'] . ']"
+                        name="ee_options[' . esc_attr($arg['input_name']) . ']"
                         value="marketing"
                         ' . (($type === 'marketing') ? 'checked' : '') . '
                     />
-                    <span>' . __('Marketing', 'elastic-email-sender') . '</span>
+                    <span>' . esc_html__('Marketing', 'elasticemailsender') . '</span>
 
                     <input
                         type="radio"
-                        name="ee_options[' . $arg['input_name'] . ']"
+                        name="ee_options[' . esc_attr($arg['input_name']) . ']"
                         value="transactional"
                         ' . (($type === 'transactional') ? 'checked' : '') . '
                     />
-                    <span>' . __('Transactional', 'elastic-email-sender') . '</span>
+                    <span>' . esc_html__('Transactional', 'elasticemailsender') . '</span>
                 </div>';
     }
 
@@ -485,27 +459,27 @@ class eeadmin5120420526
                 <div class="ee-admin-settings-radio-inline">
                     <input
                         type="radio"
-                        name="ee_options[' . $arg['input_name'] . ']"
+                        name="ee_options[' . esc_attr($arg['input_name']) . ']"
                         value="auto"
                         ' . (($mimetype === 'auto') ? 'checked' : '') . '
                     />
-                    <span>' . __('Auto (default)', 'elastic-email-sender') . '</span>
+                    <span>' . esc_html__('Auto (default)', 'elasticemailsender') . '</span>
 
                     <input
                         type="radio"
-                        name="ee_options[' . $arg['input_name'] . ']"
+                        name="ee_options[' . esc_attr($arg['input_name']) . ']"
                         value="plaintext"
                         ' . (($mimetype === 'plaintext') ? 'checked' : '') . '
                     />
-                    <span style="padding-right: 10px">' . __('plain/text', 'elastic-email-sender') . '</span>
+                    <span style="padding-right: 10px">' . esc_html__('plain/text', 'elasticemailsender') . '</span>
 
                     <input
                     type="radio"
-                    name="ee_options[' . $arg['input_name'] . ']"
+                    name="ee_options[' . esc_attr($arg['input_name']) . ']"
                     value="texthtml"
                     ' . (($mimetype === 'texthtml') ? 'checked' : '') . '
                     />
-                    <span>' . __('text/html', 'elastic-email-sender') . '</span>
+                    <span>' . esc_html__('text/html', 'elasticemailsender') . '</span>
 
                 </div>';
     }
@@ -524,15 +498,16 @@ class eeadmin5120420526
 
             /**Adding filter  to override wp_mail_from_name field , if the option is checked */
             if (get_option('ee_config_override_wooCommerce')) {
+                // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WooCommerce_name is a WooCommerce plugin hook
                 do_action('WooCommerce_name');
             }
         }
         echo '<input
                 type="text"
-                name="ee_options[' . $arg['input_name'] . ']"
-                placeholder="' . __('From name', 'elastic-email-sender') . '"
-                value="' . htmlspecialchars($config_from_name) . '"
-                style="width:' . $arg['width'] . 'px"
+                name="ee_options[' . esc_attr($arg['input_name']) . ']"
+                placeholder="' . esc_attr__('From name', 'elasticemailsender') . '"
+                value="' . esc_attr($config_from_name) . '"
+                style="width:' . absint($arg['width']) . 'px"
               />';
     }
 
@@ -560,19 +535,20 @@ class eeadmin5120420526
 
             /**Adding filter  to override wp_mail_from field , if the option is checked */
             if (get_option('ee_config_override_wooCommerce')) {
+                // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WooCommerce_email is a WooCommerce plugin hook
                 do_action('WooCommerce_email');
             }
         }
         echo '<input
                 type="text"
-                name="ee_options[' . $arg['input_name'] . ']"
-                placeholder="' . __('Email address FROM', 'elastic-email-sender') . '"
-                value="' . $config_from_email . '"
-                style="width:' . $arg['width'] . 'px"
+                name="ee_options[' . esc_attr($arg['input_name']) . ']"
+                placeholder="' . esc_attr__('Email address FROM', 'elasticemailsender') . '"
+                value="' . esc_attr($config_from_email) . '"
+                style="width:' . absint($arg['width']) . 'px"
               />';
 
         if (!$valid) {
-            _e(' is not a valid email address.', 'elastic-email-sender');
+            esc_html_e(' is not a valid email address.', 'elasticemailsender');
         }
     }
 
@@ -590,10 +566,10 @@ class eeadmin5120420526
         }
         echo '<input
                 type="text"
-                name="ee_options[' . $arg['input_name'] . ']"
-                placeholder="' . __('Channel name', 'elastic-email-sender') . '"
-                value="' . htmlspecialchars($channel_name) . '"
-                style="width:' . $arg['width'] . 'px"
+                name="ee_options[' . esc_attr($arg['input_name']) . ']"
+                placeholder="' . esc_attr__('Channel name', 'elasticemailsender') . '"
+                value="' . esc_attr($channel_name) . '"
+                style="width:' . absint($arg['width']) . 'px"
               />';
     }
 
@@ -613,10 +589,10 @@ class eeadmin5120420526
         echo '<div class="ee-admin-settings-radio-block">
                 <input
                     type="checkbox"
-                    name="ee_options[' . $arg['input_name'] . ']"
+                    name="ee_options[' . esc_attr($arg['input_name']) . ']"
                     value="yes" ' . (($override === 1) ? 'checked' : '') . '
                 />
-                <span>' . __('WooCommerce fields "Email from" and " From name"', 'elastic-email-sender') . '</span>
+                <span>' . esc_html__('WooCommerce fields "Email from" and " From name"', 'elasticemailsender') . '</span>
               </div>';
     }
 

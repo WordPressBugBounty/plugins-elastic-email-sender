@@ -9,12 +9,6 @@ class eemail
     {
         self::$options = get_option('ee_options');
 
-        if (function_exists('wp_mail')) {
-            self::$conflict = true;
-            add_action('admin_notices', array(__CLASS__, 'adminNotices'));
-            return;
-        }
-
         if (self::is_configured() === false) {
             return;
         }
@@ -22,25 +16,37 @@ class eemail
         require_once($pluginpath . '/api/ElasticEmailClient.php');
         \ElasticEmailClient\ApiClient::SetApiKey(self::getOption('ee_apikey'));
 
-        function wp_mail($to, $subject, $message, $headers = '', $attachments = array())
-        {
-            try {
-                $rs = eemail::send($to, $subject, $message, $headers, $attachments, $ee_channel = null);
+        add_filter('pre_wp_mail', array(__CLASS__, 'pre_wp_mail_handler'), 10, 2);
+    }
 
-                if ($rs !== true) {
-                    return eemail::wp_mail_native($to, $subject, $message, $headers, $attachments, $rs);
-                }
-
-                return $rs;
-            } catch (Exception $e) {
-                return eemail::wp_mail_native($to, $subject, $message, $headers, $attachments, $e->getMessage());
-            }
+    public static function pre_wp_mail_handler($null, $atts)
+    {
+        if ($null !== null) {
+            return $null;
         }
 
+        if (self::is_configured() === false) {
+            return null;
+        }
+
+        extract($atts);
+
+        try {
+            $rs = self::send($to, $subject, $message, $headers, $attachments, $ee_channel = null);
+
+            if ($rs !== true) {
+                return self::wp_mail_native($to, $subject, $message, $headers, $attachments, $rs);
+            }
+
+            return $rs;
+        } catch (Exception $e) {
+            return self::wp_mail_native($to, $subject, $message, $headers, $attachments, $e->getMessage());
+        }
     }
 
     static function send($to, $subject, $message, $headers, $attachments, $ee_channel = null)
     {
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- wp_mail is a WordPress core filter
         $atts = apply_filters('wp_mail', compact('to', 'subject', 'message', 'headers', 'attachments'));
 
         if (isset($atts['to'])) {
@@ -148,6 +154,7 @@ class eemail
                 $content_type = 'text/html';
             }
         }
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- wp_mail_content_type is a WordPress core filter
         $content_type = apply_filters('wp_mail_content_type', $content_type);
 
         if (!isset($charset)) {
@@ -157,8 +164,11 @@ class eemail
             $to = array_merge(explode(',', $to));
         }
 
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- wp_mail_from is a WordPress core filter
         $from_email = apply_filters('wp_mail_from', $from_email);
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- wp_mail_from_name is a WordPress core filter
         $from_name = apply_filters('wp_mail_from_name', $from_name);
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- wp_mail_charset is a WordPress core filter
         $charset = apply_filters('wp_mail_charset', $charset);
 
         $Email = new \ElasticEmailClient\Email();
@@ -191,6 +201,7 @@ class eemail
             $femail = $from_name;
         }
 
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- wp_mail_content_type is a WordPress core filter
         $content_type = apply_filters('wp_mail_content_type', 'text/html');
         switch (get_option('ee_mimetype')) {
             case 'texthtml':
@@ -198,6 +209,7 @@ class eemail
                 $bodyText = $message;
                 break;
             case 'plaintext':
+                // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- wp_mail_content_type is a WordPress core filter
                 $content_type = apply_filters('wp_mail_content_type', 'text/plain');
                 $bodyHtml = null;
                 $bodyText = $message;
@@ -257,17 +269,21 @@ class eemail
 
     static function wp_mail_native($to, $subject, $message, $headers, $attachments, $error)
     {
+        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Error logging is intentional for debugging email sending failures
         error_log("eemail::wp_mail_native: $to ($subject) Error: $error");
-        require_once plugin_dir_path(__DIR__) . 'defaults/function.wp_mail.php';
+        
+        // Remove our filter temporarily to use native wp_mail
+        remove_filter('pre_wp_mail', array(__CLASS__, 'pre_wp_mail_handler'), 10);
+        
+        // Use native WordPress wp_mail function
+        $result = wp_mail($to, $subject, $message, $headers, $attachments);
+        
+        // Re-add our filter
+        add_filter('pre_wp_mail', array(__CLASS__, 'pre_wp_mail_handler'), 10, 2);
+        
+        return $result;
     }
 
-    //Helpers method
-    static function adminNotices()
-    {
-        if (self::$conflict) {
-            echo '<div class="error"><p>wp_mail has been declared by another process or plugin, so you won\'t be able to use ElasticEmailSender until the problem is solved.</p></div>';
-        }
-    }
 
     static function is_configured()
     {
@@ -314,7 +330,8 @@ class eemail
     static function getDefaultDomain()
     {
         // Get the site domain and get rid of www.
-        $sitename = strtolower($_SERVER['SERVER_NAME']);
+        $ees_server_name = isset($_SERVER['SERVER_NAME']) ? sanitize_text_field(wp_unslash($_SERVER['SERVER_NAME'])) : '';
+        $sitename = strtolower($ees_server_name);
         if (substr($sitename, 0, 4) == 'www.') {
             $sitename = substr($sitename, 4);
         }

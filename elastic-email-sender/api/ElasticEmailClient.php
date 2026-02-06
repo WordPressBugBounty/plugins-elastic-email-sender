@@ -40,10 +40,13 @@ class ApiClient
     public static function insert_log($error) {
         global $wpdb;
         $table = $wpdb->prefix . 'elasticemail_log';
+        // phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery
+        // Direct database query is necessary for error logging. wpdb->insert() is the WordPress-recommended method for inserting data.
         $wpdb->insert($table, array(
-            'date' => date("d/m/Y:H:i:s").'UTC',
+            'date' => gmdate("d/m/Y:H:i:s") . ' UTC',
             'error' => $error,
         ));
+        // phpcs:enable
     }
 
     public static function Request($target, $data = array(), $method = "GET", array $attachments = array())
@@ -55,7 +58,7 @@ class ApiClient
         $data['apikey'] = self::$apiKey;
 
         if (empty(self::$apiKey)) {
-            throw new ApiException($url, $method, 'ApiKey is not set.');
+            throw new ApiException(esc_url($url), esc_html($method), 'ApiKey is not set.');
         }
 
         self::parseData($data);
@@ -142,15 +145,14 @@ class ApiClient
             array_push(self::$postbody, 'Content-Disposition: form-data; name="attachments' . ($i + 1) . '"; filename="' . $fname . '"' . "\r\n\r\n");
 
             //Loading attachment
-            $handle = fopen($attpath, "r");
-            if ($handle) {
-                $fileContent = '';
-                while (($buffer = fgets($handle, 4096)) !== false) {
-                    $fileContent .= $buffer;
-                }
-                fclose($handle);
+            // phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fopen, WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+            // Direct file operations are necessary for reading attachments in the ElasticEmail API client library.
+            // This is part of an external API library that must work independently of WordPress filesystem abstraction.
+            $fileContent = file_get_contents($attpath);
+            // phpcs:enable
+            if ($fileContent !== false) {
+                array_push(self::$postbody, $fileContent . "\r\n");
             }
-            array_push(self::$postbody, $fileContent . "\r\n");
         }
     }
 
@@ -179,7 +181,7 @@ class ApiException extends \Exception
 
     public function __toString()
     {
-        return strtoupper($this->method) . ' ' . $this->url . ' returned: ' . $this->getMessage();
+        return esc_html(strtoupper($this->method)) . ' ' . esc_url($this->url) . ' returned: ' . esc_html($this->getMessage());
     }
 
 }

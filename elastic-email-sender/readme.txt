@@ -1,14 +1,14 @@
 === Elastic Email Sender ===
 Contributors: elasticemail, rafkwa
-Tags:  elastic email, email marketing, transactional email, email sender, email, mailer, send email
+Tags: email marketing, transactional email, email sender, mailer
 Requires at least: 5.0
-Tested up to: 6.8
-Stable tag: 1.2.9
+Tested up to: 6.9
+Stable tag: 1.2.22
 Requires PHP: 7.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-This plugin reconfigures the `wp_mail()` function to send email using API (via Elastic Email) instead of SMTP and creates a Settings page that allows you to set up various options.
+Reconfigures wp_mail() to send email using Elastic Email API instead of SMTP.
 
 == Description ==
 
@@ -88,47 +88,8 @@ You can translate Elastic Email Sender on [__translate.wordpress.org__](https://
 
 == Changelog ==
 
-= 1.2.20 =
-* Regular update
+= 1.2.22 =
+* Minor fixes and optimizations
 
-= 1.2.19 =
-* Regular update
-
-= 1.2.18 =
-* Regular update
-
-= 1.2.17 =
-* Regular update
-
-= 1.2.16 =
-* Regular update
-
-= 1.2.15 =
-* Regular update
-
-= 1.2.14 =
+= 1.2.21 =
 * Bug fixes and improved application performance
-
-= 1.2.13 =
-* Added custom channel name field
-
-= 1.2.12 =
-* Bug fixes and improved application performance
-
-= 1.2.11 =
-* Bug fixes and improved application performance
-
-= 1.2.10 =
-* Regular update
-
-= 1.2.9 =
-* Bug fixes and improvements
-
-= 1.2.8 =
-* Bug fixing
-
-= 1.2.7 =
-* Bug fixing
-
-= 1.2.6 =
-* Regular update
